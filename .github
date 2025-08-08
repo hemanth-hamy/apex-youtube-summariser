@@ -1,0 +1,40 @@
+**.github/workflows/deploy-fly.yml**
+```yaml
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Import secrets to Fly
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          YTSUM_API_TOKEN: ${{ secrets.YTSUM_API_TOKEN }}
+        run: |
+          flyctl apps create apex-ytsum || true
+          printf "OPENAI_API_KEY=%s\nYTSUM_API_TOKEN=%s\n" "$OPENAI_API_KEY" "$YTSUM_API_TOKEN" | flyctl secrets import
+
+      - name: Deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl deploy --remote-only --build-only=false --now
+
+      - name: Show App URL
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          echo "Your API will be available at: https://apex-ytsum.fly.dev"
